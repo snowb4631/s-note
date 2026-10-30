@@ -53,13 +53,12 @@ npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
 `deploy/compose.yaml`로 앱 컨테이너 하나를 띄운다. 횟수 제한은 `RATE_LIMIT_BACKEND=memory`로 프로세스 메모리에 둔다. 인스턴스가 하나일 때만 유효하고 재시작하면 카운터가 초기화된다.
 
 ```bash
-docker buildx build --platform linux/amd64 --load -t snote:TAG .
-docker save snote:TAG | gzip | ssh SERVER 'gunzip | docker load'
+docker buildx build --platform linux/amd64 --push -t claudkim/snote:TAG .
 # 서버의 ~/snote: compose.yaml, .env(SNOTE_TAG, RATE_LIMIT_HMAC_SECRET, EMAIL_SENDING_ENABLED)
-docker compose up -d
+docker compose pull && docker compose up -d
 ```
 
-앱은 `127.0.0.1:3300`에만 열린다. 앞단 nginx가 `Host`로 라우팅하고 `X-Real-IP`, `X-Forwarded-For`를 `$remote_addr`로 덮어써야 한다. 그렇지 않으면 클라이언트가 IP를 속일 수 있다.
+앱은 `127.0.0.1:3300`과 앞단 nginx의 Docker 네트워크에만 열린다. `deploy/nginx-snote.conf`를 앞단 nginx의 `conf.d`에 넣으면 `Host`로 라우팅하고, Cloudflare 대역에서 온 요청은 `CF-Connecting-IP`로 실제 IP를 읽는다. 대역이 바뀌면 이 파일도 갱신한다. 인증서는 `certbot --dns-cloudflare`로 받는다.
 
 ## 배포와 DNS (사용자 작업)
 
