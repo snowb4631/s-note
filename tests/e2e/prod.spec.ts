@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { expect, test } from "@playwright/test";
+import { guides } from "../../src/content/guides";
 import { emptyCard } from "../../src/lib/card/schema";
 import { openEditor, shot } from "./helpers";
 
@@ -93,6 +94,106 @@ test.describe("ads", () => {
       await expect(page.locator(".adsbygoogle")).toHaveCount(0);
     }
   });
+
+  const GUIDE = `/guides/${guides[0].slug}`;
+  const script = 'script[src*="pagead2.googlesyndication.com"]';
+  const meta = 'head meta[name="google-adsense-account"]';
+
+  test("no variables: no script, unit or meta anywhere, and ads.txt is 404", async ({ page, request }) => {
+    const seen = adRequests(page);
+    for (const path of ["/", "/privacy", "/guides", GUIDE]) {
+      await page.goto(`${PROD}${path}`);
+      await expect(page.locator(meta)).toHaveCount(0);
+      await expect(page.locator(script)).toHaveCount(0);
+      await expect(page.getByTestId("ad-slot")).toHaveCount(0);
+    }
+    expect(seen).toEqual([]);
+    expect((await request.get(`${PROD}/ads.txt`)).status()).toBe(404);
+  });
+
+  test("both variables: script on guide pages, labelled unit well below the buttons", async ({ page }, info) => {
+    const seen = adRequests(page);
+    await page.goto(`${PROD_ADS}/guides`);
+    await expect(page.locator(script)).toHaveCount(1);
+    await expect(page.locator(".adsbygoogle")).toHaveCount(0);
+    await expect.poll(() => seen.length).toBeGreaterThan(0);
+    expect(seen[0]).toContain("client=ca-pub-1234567890123456");
+
+    await page.goto(`${PROD_ADS}${GUIDE}`);
+    await expect(page.locator(script)).toHaveCount(1);
+    const slot = page.getByTestId("ad-slot");
+    await expect(slot.getByText("광고", { exact: true })).toBeVisible();
+    await expect(slot.locator("ins.adsbygoogle")).toHaveAttribute("data-ad-slot", "1234567890");
+    const article = (await page.locator("article").boundingBox())!;
+    const ad = (await slot.boundingBox())!;
+    expect(ad.y).toBeGreaterThan(article.y + article.height);
+    for (const name of ["매매일지 카드 쓰기", "다른 글 보기"]) {
+      const b = (await page.getByRole("link", { name }).boundingBox())!;
+      expect(ad.y - (b.y + b.height)).toBeGreaterThanOrEqual(150);
+    }
+    await page.screenshot({ path: shot(`guide-ads-${info.project.name}`), fullPage: true });
+  });
+
+  test("both variables: / and /privacy load no script but carry the meta", async ({ page }) => {
+    const seen = adRequests(page);
+    for (const path of ["/", "/privacy"]) {
+      await page.goto(`${PROD_ADS}${path}`);
+      await expect(page.locator(meta)).toHaveAttribute("content", "ca-pub-1234567890123456");
+      await expect(page.locator(script)).toHaveCount(0);
+    }
+    expect(seen).toEqual([]);
+  });
+
+  for (const [from, name, to] of [
+    [GUIDE, "매매일지 카드 쓰기", "/"],
+    ["/guides", "개인정보처리방침", "/privacy"],
+  ]) {
+    test(`leaving ${from === GUIDE ? "a guide" : "the guide list"} by link for ${to} drops the script`, async ({ page }) => {
+      adRequests(page);
+      await page.goto(`${PROD_ADS}${from}`);
+      await expect(page.locator(script)).toHaveCount(1);
+      await page.getByRole("link", { name, exact: true }).click();
+      await page.waitForURL(`${PROD_ADS}${to}`);
+      await expect(page.locator(script)).toHaveCount(0);
+    });
+  }
+
+  test("going back from a guide to the editor drops the script", async ({ page }) => {
+    adRequests(page);
+    await openEditor(page, PROD_ADS);
+    await page.getByRole("link", { name: "가이드", exact: true }).click();
+    await page.waitForURL("**/guides");
+    await expect(page.locator(script)).toHaveCount(1);
+    await page.goBack();
+    await page.waitForURL(`${PROD_ADS}/`);
+    await expect(page.locator(script)).toHaveCount(0);
+  });
+
+  test("client only: Auto ads on guide pages, no unit; a valid ads.txt", async ({ page, request }) => {
+    const ONLY_CLIENT = "http://localhost:3107";
+    adRequests(page);
+    for (const path of ["/guides", GUIDE]) {
+      await page.goto(`${ONLY_CLIENT}${path}`);
+      await expect(page.locator(script)).toHaveCount(1);
+      await expect(page.locator(meta)).toHaveCount(1);
+      await expect(page.getByTestId("ad-slot")).toHaveCount(0);
+      await expect(page.locator(".adsbygoogle")).toHaveCount(0);
+    }
+    // /send still needs a slot, as before.
+    await page.goto(`${ONLY_CLIENT}/send`);
+    await expect(page.locator(script)).toHaveCount(0);
+    await expect(page.getByTestId("ad-slot")).toHaveCount(0);
+    const res = await request.get(`${ONLY_CLIENT}/ads.txt`);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toContain("text/plain");
+    expect(await res.text()).toBe("google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n");
+  });
+
+  test("the meta is in the served head, and an unknown guide is still a 404", async ({ request }) => {
+    const html = await (await request.get(`${PROD_ADS}/privacy`, { headers: { "User-Agent": "Mozilla/5.0" } })).text();
+    expect(html.slice(0, html.indexOf("</head>"))).toContain('name="google-adsense-account"');
+    expect((await request.get(`${PROD}/guides/no-such-guide`)).status()).toBe(404);
+  });
 });
 
 test("security headers are set on every page", async ({ request }) => {
@@ -111,7 +212,7 @@ test("a Turnstile script that cannot load is explained", async ({ page }) => {
   await expect(page.getByTestId("turnstile-error")).toContainText("불러오지 못해");
 });
 
-test("content pages: disclaimer on every page, six guides, privacy draft", async ({ page }, info) => {
+test("content pages: disclaimer on every page, six guides, a finished privacy page", async ({ page }, info) => {
   await page.goto(`${PROD}/guides`);
   const links = page.locator('a[href^="/guides/"]');
   await expect(links).toHaveCount(6);
@@ -126,9 +227,14 @@ test("content pages: disclaimer on every page, six guides, privacy draft", async
   await page.screenshot({ path: shot(`guide-${info.project.name}`), fullPage: true });
 
   await page.goto(`${PROD}/privacy`);
-  await expect(page.getByTestId("review-note")).toContainText("전문가의 검토");
-  await expect(page.locator("main")).toContainText("[확인 필요]");
-  await expect(page.locator("main")).toContainText("최대 24시간");
+  await expect(page.getByTestId("review-note")).toHaveCount(0);
+  const privacy = page.locator("main");
+  await expect(privacy).not.toContainText("[확인 필요]");
+  await expect(privacy).not.toContainText("초안");
+  await expect(privacy).not.toContainText("Turnstile");
+  await expect(privacy).toContainText("270-81-03788");
+  await expect(privacy).toContainText("최대 1시간");
+  await expect(privacy).toContainText("2026년 10월 31일");
   await page.screenshot({ path: shot(`privacy-${info.project.name}`), fullPage: true });
 
   const list = "artifacts/banned-phrases.json";

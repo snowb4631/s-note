@@ -28,6 +28,13 @@ describe("forbidden phrases", () => {
   });
 });
 
+describe("unfinished markers", () => {
+  it("appear nowhere in src", () => {
+    const hits = all.filter(([, text]) => /미구현|초안|확인 필요/.test(text)).map(([f]) => f);
+    expect(hits).toEqual([]);
+  });
+});
+
 describe("repository", () => {
   it("names the local planning documents only in .gitignore, which has to", () => {
     const names = [["PLAN", "md"].join("."), ["IMPLEMENTATION", "md"].join(".")];

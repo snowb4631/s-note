@@ -41,6 +41,14 @@ export default defineConfig({
       env: { ...noKeys, ADSENSE_CLIENT: "ca-pub-1234567890123456", ADSENSE_SLOT: "1234567890" },
       timeout: 60_000,
     },
+    // Production with only the ad client: Auto ads, no manual unit.
+    {
+      command: "npx next start -p 3107",
+      url: "http://localhost:3107",
+      reuseExistingServer: false,
+      env: { ...noKeys, ADSENSE_CLIENT: "ca-pub-1234567890123456" },
+      timeout: 60_000,
+    },
     // Production with a stand-in Upstash REST API: the real bundle and the real rate-limit library.
     { command: "node tests/e2e/mock-upstash.mjs 3104", url: "http://localhost:3104/health", reuseExistingServer: false, timeout: 15_000 },
     {

@@ -3,6 +3,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { adConfig } from "@/server/env";
 import nextConfig from "../../next.config";
 
 const run = promisify(execFile);
@@ -13,6 +14,18 @@ describe("next.config", () => {
     expect(rule.source).toBe("/:path*");
     const csp = rule.headers.find((h) => h.key === "Content-Security-Policy")?.value;
     expect(csp).toBe("base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'");
+  });
+});
+
+describe("adConfig", () => {
+  const client = "ca-pub-1234567890123456";
+  it("needs only a valid client; a bad or missing slot just means no manual unit", () => {
+    expect(adConfig({})).toBeNull();
+    expect(adConfig({ ADSENSE_SLOT: "1234567890" })).toBeNull();
+    expect(adConfig({ ADSENSE_CLIENT: 'ca-pub-1"><script>' })).toBeNull();
+    expect(adConfig({ ADSENSE_CLIENT: client })).toEqual({ client, slot: null });
+    expect(adConfig({ ADSENSE_CLIENT: client, ADSENSE_SLOT: "x" })).toEqual({ client, slot: null });
+    expect(adConfig({ ADSENSE_CLIENT: client, ADSENSE_SLOT: "1234567890" })).toEqual({ client, slot: "1234567890" });
   });
 });
 

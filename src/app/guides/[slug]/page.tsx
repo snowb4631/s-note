@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { GuideAds } from "@/components/GuideAds";
 import { guideBySlug, guides } from "@/content/guides";
 import { site } from "@/lib/site";
+import { adConfig } from "@/server/env";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -20,6 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GuidePage({ params }: Props) {
   const guide = guideBySlug((await params).slug);
   if (!guide) notFound();
+  await connection(); // env is read per request so ad keys need no rebuild
+  const ad = adConfig(process.env);
   return (
     <main className="mx-auto w-full max-w-[720px] px-4">
       <article className="bg-paper rounded p-5 sm:p-9 shadow-sm">
@@ -46,6 +51,7 @@ export default async function GuidePage({ params }: Props) {
         <Link href="/" className="btn btn-primary">매매일지 카드 쓰기</Link>
         <Link href="/guides" className="btn btn-ghost">다른 글 보기</Link>
       </div>
+      {ad && <GuideAds client={ad.client} slot={ad.slot} />}
     </main>
   );
 }

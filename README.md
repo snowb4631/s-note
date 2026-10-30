@@ -1,6 +1,6 @@
 # 스노트 (s-note)
 
-로그인 없이 손글씨 느낌의 매매일지 카드를 작성해 PDF로 내려받거나 이메일로 받는 서비스. 데이터베이스가 없고, 스노트 서버는 카드 내용을 저장하지 않는다. 이메일로 받으면 발송 대행사(Cloudflare)가 자체 정책에 따라 메일을 보관할 수 있다.
+로그인 없이 손글씨 느낌의 매매일지 카드를 작성해 PDF로 내려받는 서비스. 데이터베이스가 없고, 스노트 서버는 카드 내용을 저장하지 않는다. 이메일로 받기는 기본으로 꺼져 있다(`EMAIL_SENDING_ENABLED`). 켜면 발송 대행사(Cloudflare)가 자체 정책에 따라 메일을 보관할 수 있다.
 
 ## 개발
 
@@ -12,7 +12,7 @@ npm run lint
 npm test               # 단위 테스트. PDF 게이트 결과 PNG는 artifacts/ 에 생성
 npm run gate:pdf       # PDF 게이트만
 npx playwright install chromium   # 처음 한 번
-npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
+npm run test:e2e       # 빌드 후 E2E (포트 3100~3107 사용)
 ```
 
 폰트를 바꾸면 `npm run fonts:metrics`로 폭 표와 woff2를 다시 만든다.
@@ -26,7 +26,7 @@ npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
 | `src/pdf/` | react-pdf 문서와 렌더 |
 | `src/server/` | `/api/pdf`, `/api/send` 처리 순서, Turnstile, 횟수 제한, 메일 |
 | `src/content/guides.ts` | 가이드 글 |
-| `src/lib/site.ts` | 서비스 이름, 운영 주체. 미확정 값은 `[확인 필요]` |
+| `src/lib/site.ts` | 서비스 이름, 운영 주체 |
 
 미리보기와 PDF가 같은 이유: 둘 다 `buildScene(card)`가 만든 같은 도형 목록을 그린다. 줄바꿈도 폰트 폭 표로 계산하는 순수 함수라 브라우저와 서버의 결과가 같다.
 
@@ -42,22 +42,26 @@ npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
 | `RATE_LIMIT_HMAC_SECRET` | 수신 주소·IP 해시 키. 32자 이상 임의 값(운영에서 더 짧으면 503). 바꾸면 카운터가 초기화된다 | `/api/send`, `/api/pdf` |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_API_TOKEN` | Cloudflare Email Service 발송 | `/api/send` |
 | `MAIL_FROM` | 발신자. 온보딩한 하위 도메인의 주소. 예: `no-reply@mail.stock-snow.com` | `/api/send` |
-| `EMAIL_SENDING_ENABLED` | `true`일 때만 이메일 받기를 연다. 그 외에는 버튼을 미구현으로 표시하고 `/api/send`는 503. 실제 발송을 확인한 뒤 켠다 | `/`, `/send`, `/api/send` |
+| `EMAIL_SENDING_ENABLED` | `true`일 때만 이메일 받기를 연다. 그 외에는 버튼이 없고 `/send`는 `/`로 이동하며 `/api/send`는 503. 실제 발송을 확인하고 개인정보처리방침을 고친 뒤 켠다 | `/`, `/send`, `/api/send`, 푸터 |
 | `PDF_HOURLY_LIMIT` | 선택. PDF 생성의 IP당 시간당 횟수. 기본 10, 양의 정수가 아니면 기본값 | `/api/pdf` |
 | `SEND_DAILY_CAP` | 선택. 하루 전체 발송 상한. 기본 80, 양의 정수가 아니면 기본값 | `/api/send` |
-| `ADSENSE_CLIENT`, `ADSENSE_SLOT` | 선택. 둘 다 있을 때만 `/send`에 광고 슬롯과 스크립트 렌더. 승인 전에는 비워 둔다 | `/send` |
+| `ADSENSE_CLIENT` | 선택. 모든 페이지에 `google-adsense-account` 메타, `/ads.txt` 응답, 가이드 페이지(`/guides`, `/guides/[slug]`)에 Auto ads 스크립트. `/`, `/privacy`에는 스크립트를 넣지 않는다 | 전체 |
+| `ADSENSE_SLOT` | 선택. `ADSENSE_CLIENT`와 함께 있으면 가이드 글 아래와 이메일을 켠 `/send`에 광고 단위 렌더 | `/guides/[slug]`, `/send` |
 
-`/send` 관련 값은 요청 시점에 읽으므로 환경변수를 바꾼 뒤 재빌드 없이 재배포만 하면 된다.
+이메일·광고 값은 요청 시점에 읽으므로(루트 레이아웃이 `connection()`을 호출해 모든 페이지가 동적으로 렌더된다) 환경변수를 바꾼 뒤 재빌드 없이 재배포만 하면 된다.
+
+가이드 페이지에서 다른 경로로 나갈 때는 전체 새로고침을 한다. 클라이언트 전환만 하면 불러온 광고 스크립트가 편집기에도 남기 때문이다.
 
 ## 자체 서버 배포 (현재 운영)
 
 `deploy/compose.yaml`로 앱 컨테이너 하나를 띄운다. 횟수 제한은 `RATE_LIMIT_BACKEND=memory`로 프로세스 메모리에 둔다. 인스턴스가 하나일 때만 유효하고 재시작하면 카운터가 초기화된다.
 
 ```bash
-docker buildx build --platform linux/amd64 --push -t claudkim/snote:TAG .
-# 서버의 ~/snote: compose.yaml, .env(SNOTE_TAG, RATE_LIMIT_HMAC_SECRET, EMAIL_SENDING_ENABLED)
-docker compose pull && docker compose up -d
+scripts/deploy.sh          # 현재 HEAD를 빌드해 Docker Hub에 올리고, 서버는 받아서 실행
+scripts/deploy.sh <tag>    # 이전 태그로 되돌리기
 ```
+
+서버의 `~/snote/.env`에 `SNOTE_TAG`, `RATE_LIMIT_HMAC_SECRET`, `EMAIL_SENDING_ENABLED`, `ADSENSE_CLIENT`를 둔다. 서버에서는 빌드하지 않는다.
 
 앱은 `127.0.0.1:3300`과 앞단 nginx의 Docker 네트워크에만 열린다. `deploy/nginx-snote.conf`를 앞단 nginx의 `conf.d`에 넣으면 `Host`로 라우팅하고, Cloudflare 대역에서 온 요청은 `CF-Connecting-IP`로 실제 IP를 읽는다. 대역이 바뀌면 이 파일도 갱신한다. 인증서는 `certbot --dns-cloudflare`로 받는다.
 
@@ -68,7 +72,7 @@ docker compose pull && docker compose up -d
 3. Vercel에 `snote.stock-snow.com` 도메인을 추가하고, stock-snow.com DNS에 Vercel이 안내하는 CNAME을 추가한다. stock-snow.com의 네임서버가 Cloudflare이므로 이 레코드는 반드시 프록시를 끈 **DNS only (grey cloud)** 로 둔다.
 4. 메일 발신 도메인을 온보딩한다. 아래 "메일 설정"을 본다.
 5. Turnstile 위젯에 `snote.stock-snow.com`을 허용 도메인으로 등록한다.
-6. 개인정보처리방침의 `[확인 필요]` 값을 채우고 전문가 검토를 받는다. (`src/lib/site.ts`, `src/app/privacy/page.tsx`)
+6. 이메일을 켜기 전에 개인정보처리방침을 고친다. 운영 주체 값은 `src/lib/site.ts`, 본문은 `src/app/privacy/page.tsx`에 있다.
 7. 실제 메일을 Gmail, 네이버 등으로 보내 수신과 스팸함 여부를 확인한다.
 8. AdSense 승인 후 `ADSENSE_CLIENT`, `ADSENSE_SLOT`을 넣는다.
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { resolvePdfLimiters, resolveServices } from "@/server/handlers";
 import { createMemoryLimiters, parsePdfHourlyLimit } from "@/server/rate-limit";
 
@@ -11,6 +11,23 @@ async function run(limiter: () => Promise<boolean>, times: number) {
 }
 
 describe("memory rate limits", () => {
+  it("forgets an IP's hash when the hour ends, even with no further requests", async () => {
+    vi.useFakeTimers();
+    const deleted = vi.spyOn(Map.prototype, "delete");
+    const hashDeleted = () => deleted.mock.calls.some(([key]) => /^[0-9a-f]{64}$/.test(String(key)));
+    try {
+      const l = createMemoryLimiters({ secret });
+      await l.pdfIp("1.1.1.1");
+      vi.advanceTimersByTime(3_599_999);
+      expect(hashDeleted()).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(hashDeleted()).toBe(true);
+    } finally {
+      deleted.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("enforces each limit", async () => {
     const l = createMemoryLimiters({ secret, dailyCap: 3 });
     expect(await run(() => l.sendIp("1.1.1.1"), 6)).toBe(5);

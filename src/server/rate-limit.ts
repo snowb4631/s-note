@@ -108,7 +108,12 @@ export function createMemoryLimiters(config: { secret: string; dailyCap?: number
       for (const [k, e] of counts) if (e.resetAt <= at) counts.delete(k);
       if (counts.size >= MAX_MEMORY_ENTRIES) throw new Error("rate-limit-memory-full");
     }
-    counts.set(key, { count: 1, resetAt: at + windowMs });
+    const resetAt = at + windowMs;
+    counts.set(key, { count: 1, resetAt });
+    // The privacy policy promises the hash is gone when its window ends, even with no further traffic.
+    setTimeout(() => {
+      if (counts.get(key)?.resetAt === resetAt) counts.delete(key);
+    }, windowMs).unref();
     return limit >= 1;
   };
   const sendGlobal = make("send:all", config.dailyCap ?? DEFAULT_SEND_DAILY_CAP, DAY_MS);

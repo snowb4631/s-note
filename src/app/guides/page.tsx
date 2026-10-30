@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
+import { GuideAds } from "@/components/GuideAds";
 import { guides } from "@/content/guides";
+import { adConfig } from "@/server/env";
 
 export const metadata: Metadata = {
   title: "매매일지 가이드",
   description: "매매일지 작성법, 손절 원칙, 복기 루틴 등 기록 습관을 위한 글 모음",
 };
 
-export default function GuidesPage() {
+export default async function GuidesPage() {
+  await connection(); // env is read per request so ad keys need no rebuild
+  const ad = adConfig(process.env);
   return (
     <main className="mx-auto w-full max-w-[780px] px-4">
       <h1 className="font-pen text-[42px] leading-none mt-4 mb-2"><span className="mark px-1">매매일지 가이드</span></h1>
@@ -22,6 +27,7 @@ export default function GuidesPage() {
           </li>
         ))}
       </ul>
+      {ad && <GuideAds client={ad.client} slot={null} />}
     </main>
   );
 }

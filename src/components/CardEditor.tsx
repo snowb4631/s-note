@@ -388,10 +388,8 @@ export function CardEditor({ emailEnabled }: { emailEnabled: boolean }) {
               <button type="button" className="btn btn-primary flex-1" disabled={busy} onClick={() => void download()}>
                 {busy ? "만드는 중..." : "PDF 다운로드"}
               </button>
-              {emailEnabled ? (
+              {emailEnabled && (
                 <button type="button" className="btn btn-ghost flex-1" disabled={busy || blank} onClick={() => void toSend()}>이메일로 받기</button>
-              ) : (
-                <button type="button" className="btn btn-ghost flex-1" disabled>이메일로 받기 (미구현)</button>
               )}
             </div>
             {emailEnabled && blank && <p className="mt-2 text-sm text-ink-soft" data-testid="blank-note">카드에 내용을 적으면 이메일로 받을 수 있어요.</p>}
