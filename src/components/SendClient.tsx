@@ -142,7 +142,7 @@ export function SendClient({ turnstileSiteKey, showCard }: { turnstileSiteKey: s
         </button>
         <p className="text-xs leading-relaxed text-ink-soft">
           주소는 이 PDF를 보내는 데만 쓰고 스노트 서버에 저장하지 않습니다. 메일 발송을 맡은 Cloudflare는 자체 정책에 따라 발송 기록과 메일을 보관할 수 있습니다. 악용 방지를 위한 횟수 제한에는 해시값만 최대 24시간 보관합니다.{" "}
-          <Link href="/privacy" className="underline">개인정보처리방침</Link>
+          <Link href="/privacy" className="underline">개인정보 처리방침</Link>
         </p>
         <Link href="/" className="text-sm underline text-ink-soft self-start">카드로 돌아가기</Link>
       </form>

@@ -37,7 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </Link>
           <nav className="flex gap-4 text-sm text-ink-soft">
             <Link className="hover:text-ink" href="/guides">가이드</Link>
-            <Link className="hover:text-ink" href="/privacy">개인정보처리방침</Link>
+            <Link className="hover:text-ink" href="/privacy">개인정보 처리방침</Link>
           </nav>
         </header>
         <div className="flex-1">{children}</div>

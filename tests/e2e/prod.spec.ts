@@ -146,7 +146,7 @@ test.describe("ads", () => {
 
   for (const [from, name, to] of [
     [GUIDE, "매매일지 카드 쓰기", "/"],
-    ["/guides", "개인정보처리방침", "/privacy"],
+    ["/guides", "개인정보 처리방침", "/privacy"],
   ]) {
     test(`leaving ${from === GUIDE ? "a guide" : "the guide list"} by link for ${to} drops the script`, async ({ page }) => {
       adRequests(page);
@@ -235,6 +235,22 @@ test("content pages: disclaimer on every page, six guides, a finished privacy pa
   await expect(privacy).toContainText("270-81-03788");
   await expect(privacy).toContainText("최대 1시간");
   await expect(privacy).toContainText("2026년 10월 31일");
+  await expect(page.locator("h1")).toHaveText("주식회사 스노우볼 개인정보 처리방침");
+  await expect(page.locator("#officer")).toContainText("개인정보 보호책임자: 대표이사");
+  for (const id of ["#officer", "#rights"]) {
+    await expect(page.locator(id)).toContainText("이메일: snowb4631@gmail.com");
+  }
+  await expect(page.locator('#officer a[href="mailto:snowb4631@gmail.com"]')).toHaveText("snowb4631@gmail.com");
+  // Every in-page contents entry leads to a section that exists.
+  const anchors = await page.locator('nav[aria-label="목차"] a').evaluateAll((els) => els.map((e) => e.getAttribute("href")!));
+  expect(anchors.length).toBeGreaterThan(10);
+  for (const anchor of anchors) await expect(page.locator(anchor)).toHaveCount(1);
+  // Overseas transfer details the policy must carry.
+  const overseas = page.locator("#overseas");
+  for (const text of ["제28조의8제1항제3호", "Cloudflare, Inc.", "dpo@cloudflare.com", "Google LLC", "googlekrsupport@google.com"]) {
+    await expect(overseas).toContainText(text);
+  }
+  await expect(page.locator("#retention")).toContainText("일수로 정한 보유 기간이 없습니다");
   await page.screenshot({ path: shot(`privacy-${info.project.name}`), fullPage: true });
 
   const list = "artifacts/banned-phrases.json";
