@@ -1,0 +1,17 @@
+# Single-container deployment. Secrets live in .env beside this file on the server.
+name: snote
+
+services:
+  app:
+    image: snote:${SNOTE_TAG:?set SNOTE_TAG}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3300:3000"
+    environment:
+      RATE_LIMIT_BACKEND: memory
+      RATE_LIMIT_HMAC_SECRET: ${RATE_LIMIT_HMAC_SECRET:?set RATE_LIMIT_HMAC_SECRET}
+      EMAIL_SENDING_ENABLED: ${EMAIL_SENDING_ENABLED:-}
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: "3" }

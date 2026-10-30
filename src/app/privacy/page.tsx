@@ -34,8 +34,8 @@ export default function PrivacyPage() {
               </thead>
               <tbody>
                 <tr><td className={td}>이메일 주소</td><td className={td}>요청한 PDF 발송</td><td className={td}>회사 서버에 저장하지 않으며 발송 처리 후 즉시 파기. 발송 대행사(Cloudflare)의 보관은 3항 참고</td></tr>
-                <tr><td className={td}>수신 주소의 해시값(HMAC, 원문 복원 불가)</td><td className={td}>수신 주소당 일일 발송 횟수 제한(악용 방지)</td><td className={td}>Redis 저장소에 최대 24시간 보관 후 자동 삭제. 한도를 넘으면 서버 메모리에도 같은 기간 이내로 일시 보관</td></tr>
-                <tr><td className={td}>IP 주소의 해시값</td><td className={td}>IP당 시간당 요청 횟수 제한(악용 방지)</td><td className={td}>Redis 저장소에 최대 24시간 이내 보관 후 자동 삭제(현재 설정은 1시간)</td></tr>
+                <tr><td className={td}>수신 주소의 해시값(HMAC, 원문 복원 불가)</td><td className={td}>수신 주소당 일일 발송 횟수 제한(악용 방지)</td><td className={td}>서버 메모리에 최대 24시간 보관 후 자동 삭제</td></tr>
+                <tr><td className={td}>IP 주소의 해시값</td><td className={td}>IP당 시간당 요청 횟수 제한(악용 방지)</td><td className={td}>서버 메모리에 최대 1시간 보관 후 자동 삭제</td></tr>
                 <tr><td className={td}>IP 주소</td><td className={td}>봇 방지 확인, 서비스 운영 과정의 접속 처리</td><td className={td}>회사는 별도로 저장하지 않음. 수탁사 로그 보관 기간은 {UNCONFIRMED}</td></tr>
                 <tr><td className={td}>카드 작성 내용</td><td className={td}>PDF 생성</td><td className={td}>회사 서버에 저장하지 않으며 PDF 생성·발송 후 메모리에서 폐기. 이메일로 받기를 쓰면 PDF가 첨부된 메일이 발송 대행사(Cloudflare)를 거치며, 보관은 3항 참고</td></tr>
               </tbody>
@@ -55,9 +55,8 @@ export default function PrivacyPage() {
                 <tr><th className={th}>수탁사</th><th className={th}>위탁 업무</th><th className={th}>이전 항목</th><th className={th}>이전 국가</th></tr>
               </thead>
               <tbody>
-                <tr><td className={td}>Vercel</td><td className={td}>서비스 호스팅, 서버 함수 실행</td><td className={td}>IP 주소, 요청 내용</td><td className={td}>{UNCONFIRMED}</td></tr>
+                <tr><td className={td}>네이버클라우드</td><td className={td}>서비스 호스팅(서버 인프라)</td><td className={td}>IP 주소, 요청 내용</td><td className={td}>{UNCONFIRMED}</td></tr>
                 <tr><td className={td}>Cloudflare</td><td className={td}>이메일 발송(Email Service), 봇 방지(Turnstile)</td><td className={td}>이메일 주소, 첨부 PDF, IP 주소, 브라우저 정보</td><td className={td}>{UNCONFIRMED}</td></tr>
-                <tr><td className={td}>Upstash</td><td className={td}>횟수 제한 저장소(Redis)</td><td className={td}>수신 주소·IP의 해시값</td><td className={td}>{UNCONFIRMED}</td></tr>
                 <tr><td className={td}>Google</td><td className={td}>광고 게재(AdSense, 사용 시)</td><td className={td}>쿠키, 광고 식별자, IP 주소 등</td><td className={td}>{UNCONFIRMED}</td></tr>
               </tbody>
             </table>

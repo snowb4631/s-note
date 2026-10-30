@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const fontFiles = ["./src/fonts/NanumPenScript-Regular.ttf", "./src/fonts/OFL.txt"];
 
 const nextConfig: NextConfig = {
+  // The Docker image runs the standalone server; `next start` is used everywhere else.
+  output: process.env.BUILD_STANDALONE === "true" ? "standalone" : undefined,
   agentRules: false,
   devIndicators: false,
   serverExternalPackages: ["@react-pdf/renderer"],

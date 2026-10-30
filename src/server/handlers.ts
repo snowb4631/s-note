@@ -5,7 +5,7 @@ import { type Env, MIN_HMAC_SECRET_CHARS, isProduction, isTurnstileTestKey } fro
 import { clientIp, invalid, ipRateKey, jsonError, logFailure, rateLimited, readJson, unavailable } from "./http";
 import type { MailErrorCode, SendMail } from "./mail";
 import { MailError, createMailer } from "./mail";
-import { type Limiters, parseDailyCap, sharedLimiters } from "./rate-limit";
+import { type Limiters, parseDailyCap, sharedLimiters, sharedMemoryLimiters } from "./rate-limit";
 import { verifyTurnstile } from "./turnstile";
 
 export type RenderPdf = (card: Card) => Promise<Buffer>;
@@ -17,28 +17,38 @@ export type Services = {
   sendMail: SendMail | null;
 };
 
+/** Memory counts only hold on one long-running instance, so it must be chosen explicitly. */
+function configuredLimiters(env: Env): Limiters | null {
+  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token, RATE_LIMIT_HMAC_SECRET: secret } = env;
+  if (!secret) return null;
+  const dailyCap = parseDailyCap(env);
+  if (env.RATE_LIMIT_BACKEND === "memory") return sharedMemoryLimiters({ secret, dailyCap });
+  return url && token ? sharedLimiters({ url, token, secret, dailyCap }) : null;
+}
+
 /** null when production is missing configuration or runs on test values: the caller must fail closed. */
 export function resolveServices(env: Env): Services | null {
-  const { TURNSTILE_SECRET_KEY: bot, TURNSTILE_SITE_KEY: botSite, UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token, RATE_LIMIT_HMAC_SECRET: secret, CLOUDFLARE_ACCOUNT_ID: accountId, CLOUDFLARE_EMAIL_API_TOKEN: mailToken, MAIL_FROM: from } = env;
+  const { TURNSTILE_SECRET_KEY: bot, TURNSTILE_SITE_KEY: botSite, RATE_LIMIT_HMAC_SECRET: secret, CLOUDFLARE_ACCOUNT_ID: accountId, CLOUDFLARE_EMAIL_API_TOKEN: mailToken, MAIL_FROM: from } = env;
   const production = isProduction(env);
+  const limiters = configuredLimiters(env);
   if (production) {
-    if (!(bot && botSite && url && token && secret && accountId && mailToken && from)) return null;
+    if (!(bot && botSite && limiters && secret && accountId && mailToken && from)) return null;
     if (isTurnstileTestKey(bot) || isTurnstileTestKey(botSite) || secret.length < MIN_HMAC_SECRET_CHARS) return null;
   }
   // Test keys answer with their own hostname, and production has just refused them.
   const expectedHost = production ? new URL(site.url).hostname : null;
   return {
     verifyBot: bot ? (t, ip) => verifyTurnstile(bot, t, ip, fetch, expectedHost) : null,
-    limiters: url && token && secret ? sharedLimiters({ url, token, secret, dailyCap: parseDailyCap(env) }) : null,
+    limiters,
     sendMail: accountId && mailToken && from ? createMailer({ accountId, token: mailToken, from }, env) : null,
   };
 }
 
-/** /api/pdf only needs Redis, so a missing mail key does not take down downloads. */
+/** /api/pdf only needs rate limits, so a missing mail key does not take down downloads. */
 export function resolvePdfLimiters(env: Env): { limiters: Limiters | null } | null {
-  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token, RATE_LIMIT_HMAC_SECRET: secret } = env;
-  if (isProduction(env) && (secret?.length ?? 0) < MIN_HMAC_SECRET_CHARS) return null;
-  if (url && token && secret) return { limiters: sharedLimiters({ url, token, secret, dailyCap: parseDailyCap(env) }) };
+  if (isProduction(env) && (env.RATE_LIMIT_HMAC_SECRET?.length ?? 0) < MIN_HMAC_SECRET_CHARS) return null;
+  const limiters = configuredLimiters(env);
+  if (limiters) return { limiters };
   return isProduction(env) ? null : { limiters: null };
 }
 

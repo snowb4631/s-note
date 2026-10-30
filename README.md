@@ -37,6 +37,7 @@ npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
 | 이름 | 용도 | 필요한 곳 |
 | --- | --- | --- |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile | `/send`, `/api/send` |
+| `RATE_LIMIT_BACKEND` | `memory`면 프로세스 메모리로 횟수 제한(단일 서버 전용). 그 외에는 아래 Upstash 사용 | `/api/send`, `/api/pdf` |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | 횟수 제한 저장소 | `/api/send`, `/api/pdf` |
 | `RATE_LIMIT_HMAC_SECRET` | 수신 주소·IP 해시 키. 32자 이상 임의 값(운영에서 더 짧으면 503). 바꾸면 카운터가 초기화된다 | `/api/send`, `/api/pdf` |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_API_TOKEN` | Cloudflare Email Service 발송 | `/api/send` |
@@ -46,6 +47,19 @@ npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
 | `ADSENSE_CLIENT`, `ADSENSE_SLOT` | 선택. 둘 다 있을 때만 `/send`에 광고 슬롯과 스크립트 렌더. 승인 전에는 비워 둔다 | `/send` |
 
 `/send` 관련 값은 요청 시점에 읽으므로 환경변수를 바꾼 뒤 재빌드 없이 재배포만 하면 된다.
+
+## 자체 서버 배포 (현재 운영)
+
+`deploy/compose.yaml`로 앱 컨테이너 하나를 띄운다. 횟수 제한은 `RATE_LIMIT_BACKEND=memory`로 프로세스 메모리에 둔다. 인스턴스가 하나일 때만 유효하고 재시작하면 카운터가 초기화된다.
+
+```bash
+docker buildx build --platform linux/amd64 --load -t snote:TAG .
+docker save snote:TAG | gzip | ssh SERVER 'gunzip | docker load'
+# 서버의 ~/snote: compose.yaml, .env(SNOTE_TAG, RATE_LIMIT_HMAC_SECRET, EMAIL_SENDING_ENABLED)
+docker compose up -d
+```
+
+앱은 `127.0.0.1:3300`에만 열린다. 앞단 nginx가 `Host`로 라우팅하고 `X-Real-IP`, `X-Forwarded-For`를 `$remote_addr`로 덮어써야 한다. 그렇지 않으면 클라이언트가 IP를 속일 수 있다.
 
 ## 배포와 DNS (사용자 작업)
 

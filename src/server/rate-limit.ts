@@ -81,6 +81,47 @@ export function createLimiters(config: Config): Limiters {
   };
 }
 
+const MAX_MEMORY_ENTRIES = 50_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** For a single long-running server: counts live in this process and reset on restart. */
+export function createMemoryLimiters(config: { secret: string; dailyCap?: number; now?: () => number }): Limiters {
+  const now = config.now ?? Date.now;
+  const counts = new Map<string, { count: number; resetAt: number }>();
+  const make = (kind: string, limit: number, windowMs: number): Limiter => async (value) => {
+    const key = hashKey(config.secret, kind, value);
+    const at = now();
+    const entry = counts.get(key);
+    if (entry && entry.resetAt > at) {
+      entry.count += 1;
+      return entry.count <= limit;
+    }
+    if (!entry && counts.size >= MAX_MEMORY_ENTRIES) {
+      for (const [k, e] of counts) if (e.resetAt <= at) counts.delete(k);
+      if (counts.size >= MAX_MEMORY_ENTRIES) throw new Error("rate-limit-memory-full");
+    }
+    counts.set(key, { count: 1, resetAt: at + windowMs });
+    return limit >= 1;
+  };
+  const sendGlobal = make("send:all", config.dailyCap ?? DEFAULT_SEND_DAILY_CAP, DAY_MS);
+  const sendRecipient = make("send:to", 10, DAY_MS);
+  return {
+    sendIp: make("send:ip", 5, HOUR_MS),
+    sendGlobal: () => sendGlobal("all"),
+    sendRecipient: (email) => sendRecipient(normalizeRecipient(email)),
+    pdfIp: make("pdf:ip", 60, HOUR_MS),
+  };
+}
+
+let sharedMemory: { key: string; limiters: Limiters } | null = null;
+
+export function sharedMemoryLimiters(config: { secret: string; dailyCap?: number }): Limiters {
+  const key = JSON.stringify([config.secret, config.dailyCap]);
+  if (sharedMemory?.key !== key) sharedMemory = { key, limiters: createMemoryLimiters(config) };
+  return sharedMemory.limiters;
+}
+
 let shared: { key: string; limiters: Limiters } | null = null;
 
 /** Routes resolve their services per request; this keeps one set, and its block cache, per instance. */
