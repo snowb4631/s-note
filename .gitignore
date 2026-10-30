@@ -16,3 +16,4 @@ next-env.d.ts
 # 계획 문서는 로컬에만 보관
 /PLAN.md
 /IMPLEMENTATION.md
+artifacts/

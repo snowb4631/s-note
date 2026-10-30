@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #fbf7e9;
+  --color-desk: #ece7d6;
+  --color-grid: #dde3d6;
+  --color-ink: #1e2a4a;
+  --color-ink-soft: #5a6480;
+  --color-rule: #c9cfbf;
+  --color-marker: #ffe14d;
+  --color-slot: #f3eedc;
+  --color-danger: #a93a26;
+  --font-pen: var(--font-nanum-pen), "Apple SD Gothic Neo", "Malgun Gothic", cursive;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-desk);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.mark {
+  background: linear-gradient(to top, transparent 8%, var(--color-marker) 8%, var(--color-marker) 62%, transparent 62%);
+}
+
+/* Editor sheet. Below lg the fields stack; from lg up they sit where the PDF puts them. */
+.sheet {
+  --u: 1.42px; /* one PDF point, on the stacked layout */
+  container-type: inline-size;
+  position: relative;
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: calc(var(--u) * 14.173) calc(var(--u) * 14.173);
+  box-shadow: 0 1px 2px rgb(30 42 74 / 0.12), 0 14px 34px -14px rgb(30 42 74 / 0.32);
+  border-radius: 3px;
+  padding: 18px 16px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sheet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+.sheet-row .wide { grid-column: span 2; }
+.field { display: block; min-width: 0; }
+.field-label { font-family: var(--font-pen); font-size: 18px; line-height: 1.2; color: var(--color-ink-soft); display: block; }
+.field-input {
+  font-family: var(--font-pen);
+  font-size: 26px;
+  line-height: 1.25;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--color-ink);
+  border-radius: 0;
+  padding: 4px 4px 3px;
+  color: var(--color-ink);
+  outline-offset: 0;
+}
+.field-input.num { text-align: right; }
+.field-input::placeholder { color: var(--color-rule); }
+
+.field-error { font-family: var(--font-sans); font-size: 12px; line-height: 1.3; color: var(--color-danger); margin-top: 3px; }
+.stop-row { display: flex; align-items: flex-end; gap: 4px; }
+.stop-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 6px; }
+.stop-text { font-family: var(--font-pen); font-size: 15px; line-height: 1.2; word-break: keep-all; text-align: right; margin-left: auto; color: var(--color-ink); }
+.unit-select { font-family: var(--font-pen); font-size: 22px; line-height: 1.25; background: transparent; border: 0; border-bottom: 1.5px solid var(--color-ink); border-radius: 0; color: var(--color-ink); padding: 4px 0 3px; cursor: pointer; flex: none; }
+.frame { border: 1.5px solid var(--color-ink); border-radius: 5px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.frame-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: var(--font-pen); font-size: 21px; line-height: 1; }
+.frame-hint { font-size: 17px; color: var(--color-ink-soft); }
+.writing {
+  --lead: 25px;
+  font-family: var(--font-pen);
+  font-size: 20px;
+  line-height: var(--lead);
+  width: 100%;
+  min-height: calc(var(--lead) * var(--lines));
+  resize: none;
+  overflow: hidden;
+  background-color: transparent;
+  background-image: repeating-linear-gradient(transparent 0 calc(var(--lead) - 1px), rgb(201 207 191 / 0.7) calc(var(--lead) - 1px) var(--lead));
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  display: block;
+}
+.writing::placeholder { color: var(--color-ink-soft); opacity: 0.55; }
+.pad {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: crosshair;
+  background: rgb(255 255 255 / 0.35);
+}
+.slot { background: var(--color-slot); border: 1.5px dashed var(--color-rule); border-radius: 4px; min-height: 150px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+.tool {
+  font-size: 12.5px;
+  line-height: 1;
+  font-family: var(--font-sans);
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tool:hover { border-color: var(--color-ink); }
+.tool:disabled { opacity: 0.4; cursor: default; border-color: var(--color-rule); }
+.tool[aria-pressed="true"] { background: var(--color-marker); border-color: var(--color-ink); }
+
+.side {
+  font-family: var(--font-pen);
+  font-size: 28px;
+  line-height: 1.2;
+  color: var(--color-rule);
+  padding: 0 10px;
+  cursor: pointer;
+  transform: rotate(-1deg);
+}
+.side[aria-pressed="true"] { color: var(--color-ink); background: var(--color-marker); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 20px; border-radius: 6px; font-weight: 600; font-size: 15px; cursor: pointer; border: 1.5px solid var(--color-ink); }
+.btn-primary { background: var(--color-ink); color: var(--color-paper); }
+.btn-primary:hover { background: #2b3a63; }
+.btn-ghost { background: transparent; color: var(--color-ink); }
+.btn-ghost:hover { background: rgb(30 42 74 / 0.06); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+@media (min-width: 1024px) {
+  .sheet {
+    --u: calc(100cqw / 841.89);
+    display: block;
+    aspect-ratio: 841.89 / 595.28;
+    padding: 0;
+  }
+  .sheet-row { display: contents; }
+  .placed { position: absolute; left: var(--x); top: var(--y); width: var(--w); height: var(--h); }
+  .field-label { font-size: calc(var(--u) * 14); padding-left: calc(var(--u) * 2); }
+  .field-input { font-size: calc(var(--u) * 24); line-height: 1; height: calc(var(--u) * 33); padding: calc(var(--u) * 5) calc(var(--u) * 10) calc(var(--u) * 3); }
+  .field { display: flex; flex-direction: column; justify-content: space-between; }
+  .field-error { position: absolute; top: 100%; left: 0; right: 0; z-index: 5; margin: 0; padding: calc(var(--u) * 1) calc(var(--u) * 2); background: var(--color-paper); font-size: calc(var(--u) * 9); }
+  .stop-text { font-size: calc(var(--u) * 10); white-space: nowrap; }
+  /* A long value takes a second line above the input, which gives up height instead of leaving the cell. */
+  .stop-head { flex: none; }
+  .stop-row { flex: 1 1 0; min-height: 0; align-items: stretch; }
+  .stop-row > div { height: 100%; }
+  .stop-row .field-input { height: 100%; padding-top: calc(var(--u) * 2); padding-bottom: 0; }
+  .stop-row .unit-select { height: 100%; }
+  .unit-select { font-size: calc(var(--u) * 16); height: calc(var(--u) * 33); padding: 0; }
+  .frame { padding: 0; display: block; border-width: calc(var(--u) * 1); border-radius: calc(var(--u) * 4); gap: 0; }
+  .frame-head { position: absolute; left: calc(var(--u) * 12); right: calc(var(--u) * 10); top: calc(var(--u) * 5); height: calc(var(--u) * 19); font-size: calc(var(--u) * 15); flex-wrap: nowrap; }
+  .frame-hint { font-size: calc(var(--u) * 13); }
+  .writing { --lead: calc(var(--u) * 21); font-size: calc(var(--u) * 17); min-height: 0; height: 100%; }
+  .pad { height: 100%; }
+  .slot { min-height: 0; border-width: calc(var(--u) * 0.8); }
+  .side { font-size: calc(var(--u) * 24); line-height: 1.1; }
+  .tool { font-size: calc(var(--u) * 9.5); padding: calc(var(--u) * 3.5) calc(var(--u) * 5); }
+}
+
+/* Handwriting tools sit in the frame's header row on large screens. */
+.note { margin-top: 4px; }
+.pad-tools { margin-top: 6px; }
+@media (min-width: 1024px) {
+  .placed-inner { position: absolute; left: var(--ix); top: var(--iy); width: var(--iw); height: var(--ih); }
+  .note { position: absolute; bottom: 100%; left: 18%; margin: 0 0 calc(var(--u) * 4); font-size: calc(var(--u) * 10); }
+  .pad-tools { position: absolute; bottom: 100%; right: calc(var(--u) * 72); margin: 0 0 calc(var(--u) * 2); flex-wrap: nowrap; }
+}
