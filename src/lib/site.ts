@@ -4,7 +4,7 @@ export const UNCONFIRMED = "[확인 필요]";
 export const site = {
   name: "스노트",
   url: "https://snote.stock-snow.com",
-  description: "손글씨 느낌의 매매일지 카드를 로그인 없이 작성하고 PDF나 이메일로 받는 도구",
+  description: "손글씨 느낌의 매매일지 카드를 로그인 없이 작성하고 PDF로 받는 도구",
   operator: {
     company: "주식회사 스노우볼",
     representative: UNCONFIRMED,

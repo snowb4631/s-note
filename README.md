@@ -12,7 +12,7 @@ npm run lint
 npm test               # 단위 테스트. PDF 게이트 결과 PNG는 artifacts/ 에 생성
 npm run gate:pdf       # PDF 게이트만
 npx playwright install chromium   # 처음 한 번
-npm run test:e2e       # 빌드 후 E2E (포트 3100~3105 사용)
+npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
 ```
 
 폰트를 바꾸면 `npm run fonts:metrics`로 폭 표와 woff2를 다시 만든다.
@@ -41,6 +41,7 @@ npm run test:e2e       # 빌드 후 E2E (포트 3100~3105 사용)
 | `RATE_LIMIT_HMAC_SECRET` | 수신 주소·IP 해시 키. 32자 이상 임의 값(운영에서 더 짧으면 503). 바꾸면 카운터가 초기화된다 | `/api/send`, `/api/pdf` |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_API_TOKEN` | Cloudflare Email Service 발송 | `/api/send` |
 | `MAIL_FROM` | 발신자. 온보딩한 하위 도메인의 주소. 예: `no-reply@mail.stock-snow.com` | `/api/send` |
+| `EMAIL_SENDING_ENABLED` | `true`일 때만 이메일 받기를 연다. 그 외에는 버튼을 미구현으로 표시하고 `/api/send`는 503. 실제 발송을 확인한 뒤 켠다 | `/`, `/send`, `/api/send` |
 | `SEND_DAILY_CAP` | 선택. 하루 전체 발송 상한. 기본 80, 양의 정수가 아니면 기본값 | `/api/send` |
 | `ADSENSE_CLIENT`, `ADSENSE_SLOT` | 선택. 둘 다 있을 때만 `/send`에 광고 슬롯과 스크립트 렌더. 승인 전에는 비워 둔다 | `/send` |
 

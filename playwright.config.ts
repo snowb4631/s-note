@@ -12,6 +12,7 @@ const noKeys = {
   MAIL_FROM: "",
   ADSENSE_CLIENT: "",
   ADSENSE_SLOT: "",
+  EMAIL_SENDING_ENABLED: "true",
 };
 
 export const DEV = "http://localhost:3100";
@@ -55,6 +56,14 @@ export default defineConfig({
       url: "http://localhost:3105",
       reuseExistingServer: false,
       env: { ...noKeys, TURNSTILE_SITE_KEY: "1x00000000000000000000AA" },
+      timeout: 60_000,
+    },
+    // Production with email not switched on: the default.
+    {
+      command: "npx next start -p 3106",
+      url: "http://localhost:3106",
+      reuseExistingServer: false,
+      env: { ...noKeys, EMAIL_SENDING_ENABLED: "" },
       timeout: 60_000,
     },
   ],
