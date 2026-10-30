@@ -2,12 +2,12 @@
 # 이미지를 로컬에서 빌드해 Docker Hub에 올리고, 서버는 받아서 실행만 한다.
 #   scripts/deploy.sh            현재 HEAD를 빌드·배포
 #   scripts/deploy.sh <tag>      이미 올린 태그로 되돌리기 (빌드 없음)
-# 필요: 로컬·서버의 docker login, 서버 계정의 비밀번호 없는 sudo, 서버 ~/snote/.env.
+# 필요: 로컬·서버의 docker login, 서버 ~/snote/.env. 서버에서 sudo는 쓰지 않는다.
 set -euo pipefail
 
 SERVER="${SNOTE_SERVER:-claudkim@49.50.139.64}"
 REMOTE_DIR="${SNOTE_REMOTE_DIR:-snote}"
-NGINX_CONF="${SNOTE_NGINX_CONF:-/root/git/trakit/nginx/conf.d/snote.conf}"
+NGINX_CONF="${SNOTE_NGINX_CONF:-/srv/trakit/nginx/conf.d/snote.conf}"
 IMAGE="${SNOTE_IMAGE:-claudkim/snote}"
 PLATFORM="${SNOTE_PLATFORM:-linux/amd64}"
 
@@ -38,13 +38,12 @@ docker compose pull --quiet </dev/null
 docker compose up -d </dev/null
 
 # 문법 오류가 있으면 이전 설정으로 되돌려 같은 nginx를 쓰는 다른 서비스를 지킨다.
-# 이 스크립트는 표준 입력으로 실행되므로, sudo가 그 입력을 읽지 못하게 막는다.
-if ! sudo -n cmp -s nginx-snote.conf "$conf" </dev/null; then
+if ! cmp -s nginx-snote.conf "$conf"; then
   backup="$(mktemp)"
-  sudo -n cp "$conf" "$backup" </dev/null
-  sudo -n install -m 644 -o root -g root nginx-snote.conf "$conf" </dev/null
+  cp "$conf" "$backup"
+  install -m 644 nginx-snote.conf "$conf"
   if ! docker exec trakit-nginx nginx -t </dev/null; then
-    sudo -n cp "$backup" "$conf" </dev/null
+    cp "$backup" "$conf"
     echo "nginx 설정 검사 실패: 이전 설정으로 되돌렸습니다." >&2
     exit 1
   fi
