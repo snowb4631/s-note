@@ -38,7 +38,7 @@ docker compose pull --quiet </dev/null
 docker compose up -d </dev/null
 
 # 문법 오류가 있으면 이전 설정으로 되돌려 같은 nginx를 쓰는 다른 서비스를 지킨다.
-# sudo가 표준 입력을 읽으면 이 스크립트의 나머지가 사라지므로 모두 /dev/null을 준다.
+# 이 스크립트는 표준 입력으로 실행되므로, sudo가 그 입력을 읽지 못하게 막는다.
 if ! sudo -n cmp -s nginx-snote.conf "$conf" </dev/null; then
   backup="$(mktemp)"
   sudo -n cp "$conf" "$backup" </dev/null
@@ -51,8 +51,14 @@ if ! sudo -n cmp -s nginx-snote.conf "$conf" </dev/null; then
   docker exec trakit-nginx nginx -s reload </dev/null
 fi
 
-code="$(curl -sk -o /dev/null -w '%{http_code}' --retry 15 --retry-all-errors --retry-delay 2 \
-  --resolve snote.stock-snow.com:443:127.0.0.1 https://snote.stock-snow.com/)"
+# curl --retry는 -o /dev/null과 함께 쓰면 오류 23으로 끝날 수 있어 직접 반복한다.
+code=000
+for _ in $(seq 1 30); do
+  code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 \
+    --resolve snote.stock-snow.com:443:127.0.0.1 https://snote.stock-snow.com/ || true)"
+  [ "$code" = 200 ] && break
+  sleep 2
+done
 [ "$code" = 200 ] || { echo "상태 확인 실패: HTTP $code" >&2; exit 1; }
 docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep '^snote-'
 REMOTE
