@@ -38,12 +38,13 @@ docker compose pull --quiet </dev/null
 docker compose up -d </dev/null
 
 # 문법 오류가 있으면 이전 설정으로 되돌려 같은 nginx를 쓰는 다른 서비스를 지킨다.
-if ! sudo -n cmp -s nginx-snote.conf "$conf"; then
+# sudo가 표준 입력을 읽으면 이 스크립트의 나머지가 사라지므로 모두 /dev/null을 준다.
+if ! sudo -n cmp -s nginx-snote.conf "$conf" </dev/null; then
   backup="$(mktemp)"
-  sudo -n cp "$conf" "$backup"
-  sudo -n install -m 644 -o root -g root nginx-snote.conf "$conf"
+  sudo -n cp "$conf" "$backup" </dev/null
+  sudo -n install -m 644 -o root -g root nginx-snote.conf "$conf" </dev/null
   if ! docker exec trakit-nginx nginx -t </dev/null; then
-    sudo -n cp "$backup" "$conf"
+    sudo -n cp "$backup" "$conf" </dev/null
     echo "nginx 설정 검사 실패: 이전 설정으로 되돌렸습니다." >&2
     exit 1
   fi
