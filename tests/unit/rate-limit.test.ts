@@ -71,11 +71,11 @@ describe("limiters through the real client libraries", () => {
     // The script's PEXPIRE argument: one window, 24h.
     expect(bodies[0]).toContain(String(24 * 60 * 60 * 1000));
   });
-  it("PDF: 60 per hour", async () => {
+  it("PDF: 10 per hour by default", async () => {
     const { pdfIp } = limiters();
     let passed = 0;
     for (let i = 0; i < 61; i += 1) if (await pdfIp("203.0.113.9")) passed += 1;
-    expect(passed).toBe(60);
+    expect(passed).toBe(10);
   });
   it("recipient: tag and Gmail dot variants share one quota", async () => {
     const { sendRecipient } = limiters();

@@ -5,14 +5,21 @@ import type { Env } from "./env";
 
 export type Limiter = (value: string) => Promise<boolean>;
 export type Limiters = { sendIp: Limiter; sendGlobal: () => Promise<boolean>; sendRecipient: Limiter; pdfIp: Limiter };
-type Config = { url: string; token: string; secret: string; dailyCap?: number };
+type Config = { url: string; token: string; secret: string; dailyCap?: number; pdfHourlyLimit?: number };
 
 export const DEFAULT_SEND_DAILY_CAP = 80;
+export const DEFAULT_PDF_HOURLY_LIMIT = 10;
 
 /** Anything but a positive whole number falls back to the default rather than removing the cap. */
 export function parseDailyCap(env: Env): number {
   const raw = env.SEND_DAILY_CAP;
   return raw && /^[1-9]\d*$/.test(raw) ? Number(raw) : DEFAULT_SEND_DAILY_CAP;
+}
+
+/** Same rule as the daily cap: junk falls back to the default, so it can never remove the limit. */
+export function parsePdfHourlyLimit(env: Env): number {
+  const raw = env.PDF_HOURLY_LIMIT;
+  return raw && /^[1-9]\d*$/.test(raw) ? Number(raw) : DEFAULT_PDF_HOURLY_LIMIT;
 }
 
 /** Redis only ever sees keyed hashes, never a raw email address or IP. */
@@ -77,7 +84,7 @@ export function createLimiters(config: Config): Limiters {
     sendIp: make("send:ip", Ratelimit.fixedWindow(5, "1 h")),
     sendGlobal: () => sendGlobal("all"),
     sendRecipient: (email) => sendRecipient(normalizeRecipient(email)),
-    pdfIp: make("pdf:ip", Ratelimit.fixedWindow(60, "1 h")),
+    pdfIp: make("pdf:ip", Ratelimit.fixedWindow(config.pdfHourlyLimit ?? DEFAULT_PDF_HOURLY_LIMIT, "1 h")),
   };
 }
 
@@ -86,7 +93,7 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
 /** For a single long-running server: counts live in this process and reset on restart. */
-export function createMemoryLimiters(config: { secret: string; dailyCap?: number; now?: () => number }): Limiters {
+export function createMemoryLimiters(config: { secret: string; dailyCap?: number; pdfHourlyLimit?: number; now?: () => number }): Limiters {
   const now = config.now ?? Date.now;
   const counts = new Map<string, { count: number; resetAt: number }>();
   const make = (kind: string, limit: number, windowMs: number): Limiter => async (value) => {
@@ -110,14 +117,14 @@ export function createMemoryLimiters(config: { secret: string; dailyCap?: number
     sendIp: make("send:ip", 5, HOUR_MS),
     sendGlobal: () => sendGlobal("all"),
     sendRecipient: (email) => sendRecipient(normalizeRecipient(email)),
-    pdfIp: make("pdf:ip", 60, HOUR_MS),
+    pdfIp: make("pdf:ip", config.pdfHourlyLimit ?? DEFAULT_PDF_HOURLY_LIMIT, HOUR_MS),
   };
 }
 
 let sharedMemory: { key: string; limiters: Limiters } | null = null;
 
-export function sharedMemoryLimiters(config: { secret: string; dailyCap?: number }): Limiters {
-  const key = JSON.stringify([config.secret, config.dailyCap]);
+export function sharedMemoryLimiters(config: { secret: string; dailyCap?: number; pdfHourlyLimit?: number }): Limiters {
+  const key = JSON.stringify([config.secret, config.dailyCap, config.pdfHourlyLimit]);
   if (sharedMemory?.key !== key) sharedMemory = { key, limiters: createMemoryLimiters(config) };
   return sharedMemory.limiters;
 }
@@ -126,7 +133,7 @@ let shared: { key: string; limiters: Limiters } | null = null;
 
 /** Routes resolve their services per request; this keeps one set, and its block cache, per instance. */
 export function sharedLimiters(config: Config): Limiters {
-  const key = JSON.stringify([config.url, config.token, config.secret, config.dailyCap]);
+  const key = JSON.stringify([config.url, config.token, config.secret, config.dailyCap, config.pdfHourlyLimit]);
   if (shared?.key !== key) shared = { key, limiters: createLimiters(config) };
   return shared.limiters;
 }

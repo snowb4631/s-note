@@ -43,6 +43,7 @@ npm run test:e2e       # 빌드 후 E2E (포트 3100~3106 사용)
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_API_TOKEN` | Cloudflare Email Service 발송 | `/api/send` |
 | `MAIL_FROM` | 발신자. 온보딩한 하위 도메인의 주소. 예: `no-reply@mail.stock-snow.com` | `/api/send` |
 | `EMAIL_SENDING_ENABLED` | `true`일 때만 이메일 받기를 연다. 그 외에는 버튼을 미구현으로 표시하고 `/api/send`는 503. 실제 발송을 확인한 뒤 켠다 | `/`, `/send`, `/api/send` |
+| `PDF_HOURLY_LIMIT` | 선택. PDF 생성의 IP당 시간당 횟수. 기본 10, 양의 정수가 아니면 기본값 | `/api/pdf` |
 | `SEND_DAILY_CAP` | 선택. 하루 전체 발송 상한. 기본 80, 양의 정수가 아니면 기본값 | `/api/send` |
 | `ADSENSE_CLIENT`, `ADSENSE_SLOT` | 선택. 둘 다 있을 때만 `/send`에 광고 슬롯과 스크립트 렌더. 승인 전에는 비워 둔다 | `/send` |
 
@@ -94,7 +95,7 @@ MAIL_FROM=no-reply@mail.stock-snow.com
 
 ## 횟수 제한
 
-IP당 시간당 5통(IPv6는 /64 단위), 하루 전체 80통(`SEND_DAILY_CAP`), 수신 주소당 하루 10통(대소문자, `+태그`, Gmail의 점을 무시), `/api/pdf`는 IP당 시간당 60회. `src/server/rate-limit.ts`에서 바꾼다. 확인 순서는 IP, 수신 주소, 전체이며 앞 단계에서 거절되면 뒤 단계의 횟수를 쓰지 않는다. 전체 상한에서 거절된 요청은 수신 주소 횟수를 이미 쓴 상태다. Redis 장애 시 거절한다. Redis에는 HMAC 해시만 들어가고, fixed window라 키는 한 창(최대 24시간)이 지나면 만료된다. 한도에 걸린 해시는 인스턴스 메모리에 창이 끝날 때까지 남아 반복 요청은 Redis를 호출하지 않는다.
+IP당 시간당 5통(IPv6는 /64 단위), 하루 전체 80통(`SEND_DAILY_CAP`), 수신 주소당 하루 10통(대소문자, `+태그`, Gmail의 점을 무시), `/api/pdf`는 IP당 시간당 10회(`PDF_HOURLY_LIMIT`). `src/server/rate-limit.ts`에서 바꾼다. 확인 순서는 IP, 수신 주소, 전체이며 앞 단계에서 거절되면 뒤 단계의 횟수를 쓰지 않는다. 전체 상한에서 거절된 요청은 수신 주소 횟수를 이미 쓴 상태다. Redis 장애 시 거절한다. Redis에는 HMAC 해시만 들어가고, fixed window라 키는 한 창(최대 24시간)이 지나면 만료된다. 한도에 걸린 해시는 인스턴스 메모리에 창이 끝날 때까지 남아 반복 요청은 Redis를 호출하지 않는다.
 
 전체 상한은 소진되면 그날 모든 사용자의 메일이 막힌다. 악용으로 소진될 수 있으니 아래 경보를 켠다.
 

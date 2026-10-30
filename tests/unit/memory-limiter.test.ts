@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolvePdfLimiters, resolveServices } from "@/server/handlers";
-import { createMemoryLimiters } from "@/server/rate-limit";
+import { createMemoryLimiters, parsePdfHourlyLimit } from "@/server/rate-limit";
 
 const secret = "s".repeat(32);
 
@@ -14,10 +14,18 @@ describe("memory rate limits", () => {
   it("enforces each limit", async () => {
     const l = createMemoryLimiters({ secret, dailyCap: 3 });
     expect(await run(() => l.sendIp("1.1.1.1"), 6)).toBe(5);
-    expect(await run(() => l.pdfIp("1.1.1.1"), 61)).toBe(60);
+    expect(await run(() => l.pdfIp("1.1.1.1"), 11)).toBe(10);
     expect(await run(() => l.sendRecipient("a.b+x@gmail.com"), 6)).toBe(6);
     expect(await run(() => l.sendRecipient("ab@gmail.com"), 5)).toBe(4);
     expect(await run(() => l.sendGlobal(), 4)).toBe(3);
+  });
+
+  it("PDF limit is configurable", async () => {
+    const l = createMemoryLimiters({ secret, pdfHourlyLimit: 3 });
+    expect(await run(() => l.pdfIp("ip"), 5)).toBe(3);
+    expect(parsePdfHourlyLimit({})).toBe(10);
+    expect(parsePdfHourlyLimit({ PDF_HOURLY_LIMIT: "25" })).toBe(25);
+    for (const bad of ["", "0", "-1", "1e9", "abc"]) expect(parsePdfHourlyLimit({ PDF_HOURLY_LIMIT: bad })).toBe(10);
   });
 
   it("opens again when the window ends", async () => {

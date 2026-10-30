@@ -6,7 +6,7 @@ import { typicalCard } from "../unit/sample";
 const APP = "http://localhost:3103";
 const REDIS = "http://localhost:3104";
 
-test("production bundle renders Korean PDFs (font traced, react-pdf external) and enforces 60/h", async ({ request }, info) => {
+test("production bundle renders Korean PDFs (font traced, react-pdf external) and enforces 10/h", async ({ request }, info) => {
   test.skip(info.project.name !== "desktop", "server only");
   await request.get(`${REDIS}/reset`);
 
@@ -18,7 +18,7 @@ test("production bundle renders Korean PDFs (font traced, react-pdf external) an
   expect(meta.text.replace(/\s/g, "")).toContain("예시전자우선주");
 
   const light = emptyCard("2026-10-30");
-  for (let i = 2; i <= 60; i += 1) {
+  for (let i = 2; i <= 10; i += 1) {
     const r = await request.post(`${APP}/api/pdf`, { data: light, headers: { "x-real-ip": "203.0.113.50" } });
     expect(r.status(), `request ${i}`).toBe(200);
   }

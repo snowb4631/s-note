@@ -5,7 +5,7 @@ import { type Env, MIN_HMAC_SECRET_CHARS, isProduction, isTurnstileTestKey } fro
 import { clientIp, invalid, ipRateKey, jsonError, logFailure, rateLimited, readJson, unavailable } from "./http";
 import type { MailErrorCode, SendMail } from "./mail";
 import { MailError, createMailer } from "./mail";
-import { type Limiters, parseDailyCap, sharedLimiters, sharedMemoryLimiters } from "./rate-limit";
+import { type Limiters, parseDailyCap, parsePdfHourlyLimit, sharedLimiters, sharedMemoryLimiters } from "./rate-limit";
 import { verifyTurnstile } from "./turnstile";
 
 export type RenderPdf = (card: Card) => Promise<Buffer>;
@@ -21,9 +21,9 @@ export type Services = {
 function configuredLimiters(env: Env): Limiters | null {
   const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token, RATE_LIMIT_HMAC_SECRET: secret } = env;
   if (!secret) return null;
-  const dailyCap = parseDailyCap(env);
-  if (env.RATE_LIMIT_BACKEND === "memory") return sharedMemoryLimiters({ secret, dailyCap });
-  return url && token ? sharedLimiters({ url, token, secret, dailyCap }) : null;
+  const limits = { dailyCap: parseDailyCap(env), pdfHourlyLimit: parsePdfHourlyLimit(env) };
+  if (env.RATE_LIMIT_BACKEND === "memory") return sharedMemoryLimiters({ secret, ...limits });
+  return url && token ? sharedLimiters({ url, token, secret, ...limits }) : null;
 }
 
 /** null when production is missing configuration or runs on test values: the caller must fail closed. */

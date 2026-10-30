@@ -12,6 +12,7 @@ services:
       RATE_LIMIT_BACKEND: memory
       RATE_LIMIT_HMAC_SECRET: ${RATE_LIMIT_HMAC_SECRET:?set RATE_LIMIT_HMAC_SECRET}
       EMAIL_SENDING_ENABLED: ${EMAIL_SENDING_ENABLED:-}
+      PDF_HOURLY_LIMIT: ${PDF_HOURLY_LIMIT:-}
     networks:
       default: {}
       edge:
